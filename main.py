@@ -1,6 +1,6 @@
 import sqlite3
 
-conexao = sqlite3.connect("teste.db")
+conexao = sqlite3.connect("gerenciador.db")
 cursor = conexao.cursor()
 
 cursor.execute("""
@@ -24,14 +24,34 @@ CREATE TABLE IF NOT EXISTS pedidos(
 
 conexao.commit()
 
+#======================================================================================================================================
+
+def pedir_inteiro(mensagem):
+    while True:
+        entrada = input(mensagem)
+        try:
+            return int(entrada)
+        except ValueError:
+            print("\n Valor inválido. Digite um número inteiro.\n")
+
+def pedir_float(mensagem):
+    while True:
+        entrada = input(mensagem)
+        try:
+            return float(entrada)
+        except ValueError:
+            print("\n Valor inválido. Digite um número (ex: 10.50).\n")
+
+#======================================================================================================================================
+
 while True:
 
-    escolha = int(input("""===========================================
+    escolha = pedir_inteiro("""===========================================
  1 - adicionar usuários\n 2 - mostrar todos (A-Z)\n 3 - editar usuario
  4 - remover usuario\n 5 - adicionar pedido\n 6 - mostrar usuários com seus pedidos
  7 - exibir pedidos de um usuário específico\n 8 - remover pedido\n 9 - Sair
  ===========================================
- Escolha uma das opções dadas acima: """))
+ Escolha uma das opções dadas acima: """)
     print(" ===========================================")
 
 #======================================================================================================================================
@@ -41,7 +61,7 @@ while True:
             nome = input("\n Qual o nome do usuario: ")
             if nome == "":
                 break
-            idade = int(input("\n Qual a idade do usuario: "))
+            idade = pedir_inteiro("\n Qual a idade do usuario: ")
             email = input("\n Qual é o email do usuario: ")
             telefone = input("\n Qual é o telefone do usuario: ")
             print(" ===========================================")
@@ -90,7 +110,7 @@ while True:
             id, nome = n
             print(f"\n ID: {id}\n Nome: {nome}\n")
 
-        id_escolha = int(input("\ndigite o id do usuario que deseja alterar os dados: "))
+        id_escolha = pedir_inteiro("\ndigite o id do usuario que deseja alterar os dados: ")
 
         cursor.execute("SELECT * FROM usuarios WHERE id = ?", (id_escolha,))
         usuario3 = cursor.fetchone()
@@ -109,7 +129,7 @@ while True:
             print("\n Nome alterado com sucesso!\n")
 
         elif escolha3 == "idade":
-            idade = int(input("\n Digite a nova idade: "))
+            idade = pedir_inteiro("\n Digite a nova idade: ")
             cursor.execute("UPDATE usuarios SET idade = ? WHERE id = ?", (idade, id_escolha))
             conexao.commit()
             print("\n Idade alterada com sucesso!\n")
@@ -139,10 +159,14 @@ while True:
             id, nome = n
             print(f"\n ID: {id}\n Nome: {nome}\n")
 
-        id_escolha = int(input("\n digite o id do usuario que deseja remover: "))
+        id_escolha = pedir_inteiro("\n digite o id do usuario que deseja remover: ")
 
         cursor.execute("SELECT * FROM usuarios WHERE id = ?", (id_escolha,))
         usuario_encontrado = cursor.fetchone()
+
+        if usuario_encontrado is None:
+            print("\n ID não encontrado. Tente novamente.\n")
+            continue
 
         cursor.execute("DELETE FROM pedidos WHERE usuario_id = ?", (id_escolha,))
         cursor.execute("DELETE FROM usuarios WHERE id = ?", (id_escolha,))
@@ -160,12 +184,14 @@ while True:
             print(f"\n ID: {id}\n Nome: {nome}")
 
         descricao = input("\n Digite a descrição do produto: ")
-        valor = float(input("\n Digite o valor do produto: "))
-        id_usuario = int(input("\n Digite o ID de um usuário existente para adicionar um pedido: "))
-        if id_usuario is None:
-         print("\n ID não encontrado. Tente novamente.\n")
-         print(" ===========================================")
-         break
+        valor = pedir_float("\n Digite o valor do produto: ")
+        id_usuario = pedir_inteiro("\n Digite o ID de um usuário existente para adicionar um pedido: ")
+        cursor.execute("SELECT * FROM usuarios WHERE id = ?", (id_usuario,))
+        usuario_existe = cursor.fetchone()
+        if usuario_existe is None:
+            print("\n ID não encontrado. Tente novamente.\n")
+            print(" ===========================================")
+            continue
 
         cursor.execute("INSERT INTO pedidos (descricao, valor, usuario_id) VALUES (?, ?, ?)", (descricao, valor, id_usuario))
         conexao.commit()
@@ -195,18 +221,21 @@ while True:
             id, nome = n
             print(f"\n ID: {id}\n Nome: {nome}\n")
 
-        id_usuario = int(input("\n Digite o ID de um usuário existente para exibir seus pedidos: "))
+        id_usuario = pedir_inteiro("\n Digite o ID de um usuário existente para exibir seus pedidos: ")
 
-        if id_usuario is None:
-                 print("\n ID não encontrado. Tente novamente.\n")
-                 print(" ===========================================")
-                 break
+        cursor.execute("SELECT id FROM usuarios WHERE id = ?", (id_usuario,))
+        usuario_existe = cursor.fetchone()
+
+        if usuario_existe is None:
+            print("\n ID não encontrado. Tente novamente.\n")
+            print(" ===========================================")
+            continue
 
         cursor.execute("""
                         SELECT usuarios.nome, pedidos.descricao AS produtos, pedidos.valor FROM pedidos
                         JOIN usuarios
                         ON pedidos.usuario_id = usuarios.id
-                        WHERE usuario.id = ?""", (id_usuario,))
+                        WHERE usuarios.id = ?""", (id_usuario,))
         usuario7 = cursor.fetchall()
 
         for n in usuario7:
@@ -223,7 +252,14 @@ while True:
             id, descricao, valor, usuario_id = n
             print(f"\n  ID: {id}\n Produto: {descricao}\n Valor: R${valor:.2f}\n ID do usuário: {usuario_id}\n")
 
-        escolha8 = int(input("\n Digite o ID do pedido que deseja remover: "))
+        escolha8 = pedir_inteiro("\n Digite o ID do pedido que deseja remover: ")
+
+        cursor.execute("SELECT * FROM pedidos WHERE id = ?", (escolha8,))
+        pedido_encontrado = cursor.fetchone()
+
+        if pedido_encontrado is None:
+            print("\n ID não encontrado. Tente novamente.\n")
+            continue
 
         cursor.execute("DELETE FROM pedidos WHERE id = ?", (escolha8,))
         conexao.commit()
@@ -232,6 +268,8 @@ while True:
 #======================================================================================================================================
 
     elif escolha == 9:
+        print("\n Saindo do programa...")
+        conexao.close()
         break
 
 #======================================================================================================================================
